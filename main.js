@@ -157,3 +157,5 @@ class Moneda {
     }
     }
 const juego = new Game();
+
+//esto es una prueba
