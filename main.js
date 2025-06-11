@@ -1,6 +1,8 @@
 class Game {
   constructor() { 
 		this.container = document.getElementById("game-container");
+        this.world = this.container.querySelector(".world"); // ← NUEVO
+        this.worldX = 0; 
         this.personaje = null;
         this.monedas = [];
         this.puntuacion = 0;
@@ -11,29 +13,32 @@ class Game {
   
   crearEscenario() {
     this.personaje = new Personaje();
-	this.container.appendChild(this.personaje.element);
-	for (let i = 0; i < 5; i++) {
-	const moneda = new Moneda();
-	this.monedas.push(moneda);
-	this.container.appendChild(moneda.element);
-	}
+    this.personaje.container = this.container;
+    this.personaje.world     = this.world;
+    this.world.appendChild(this.personaje.element);   // ← usa .world
+    for (let i = 0; i < 5; i++) {
+    const moneda = new Moneda();
+    this.monedas.push(moneda);
+    this.world.appendChild(moneda.element);         // ← usa .world
+  }
 }
+
   agregarEventos() {
 	window.addEventListener("keydown", (e) => this.personaje.mover(e));
     this.checkColisiones();
 }
   checkColisiones() {
-	setInterval(() => {
-        this.monedas.forEach((moneda, index) => {
-            if (this.personaje.colisionaCon(moneda)) {
-            this.container.removeChild(moneda.element);
-            this.monedas.splice(index, 1);
-            this.actualizarPuntuacion(10);
+	  setInterval(() => {
+    this.monedas = this.monedas.filter(moneda => {
+      if (this.personaje.colisionaCon(moneda)) {
+        this.world.removeChild(moneda.element);  // ← eliminar del world
+        this.actualizarPuntuacion(10);
+        return false;                            // → la filtramos fuera del array
       }
+      return true;
     });
-    
   }, 100);
-} 
+}
 
 actualizarPuntuacion(puntos) {
     this.puntuacion += puntos;
@@ -67,24 +72,37 @@ class Personaje {
     }
 
     mover(evento) {
-    if (evento.key === "ArrowRight") {
-        this.x += this.velocidad;
-    } else if (evento.key === "ArrowLeft") {
-        this.x -= this.velocidad;
-    } 
-    else if (evento.code === "Space" 
-             && this.jumpCount < 2 
-             && !this.spacePressed) 
-    {
-        evento.preventDefault();
-        this.spacePressed = true;  // 🚧 bloquea nuevos keydown hasta keyup
-        this.saltar();
+  const maxOffset = this.world.scrollWidth - this.container.clientWidth; 
+  const leftLimit  = 20; // px desde el borde izquierdo
+  const rightLimit = this.container.clientWidth - this.width - 20;
+
+
+  if (evento.key === "ArrowRight") {
+    // 1) Si el personaje no alcanzó el límite derecho del contenedor:
+    if (this.x < rightLimit) {              
+      this.x += this.velocidad;
+    } else if (this.worldX < maxOffset) {
+      // 2) Si ya está en el límite, movemos el mundo a la izquierda
+      this.worldX = Math.min(this.worldX + this.velocidad, maxOffset);
+      this.world.style.transform = `translateX(-${this.worldX}px)`;
     }
-
-    this.actualizarPosicion();
+  } else if (evento.key === "ArrowLeft") {
+    // 1) Si el personaje no alcanzó el límite izquierdo:
+    if (this.x > leftLimit) {
+      this.x -= this.velocidad;
+    } else if (this.worldX > 0) {
+      // 2) Si está en el límite izquierdo, movemos el mundo a la derecha
+      this.worldX = Math.max(this.worldX - this.velocidad, 0);
+      this.world.style.transform = `translateX(-${this.worldX}px)`;
+    }
+  } else if ((evento.code === "Space" || evento.key === " ") && this.jumpCount < 2 && !this.spacePressed) {
+    evento.preventDefault();
+    this.spacePressed = true;
+    this.saltar();
+  }
+  
+  this.actualizarPosicion();
 }
-
-
 
     saltar() {
         if (this._saltoTimer){
@@ -157,5 +175,3 @@ class Moneda {
     }
     }
 const juego = new Game();
-
-//esto es una prueba

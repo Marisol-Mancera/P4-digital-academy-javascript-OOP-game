@@ -43,3 +43,18 @@ body {
   text-align: center;
   margin: 10px 0;
 }
+
+/* Nuevo wrapper para desplazar el escenario */
+.world {
+  position: absolute;          /* Para poder moverlo con translate */
+  top: 0; left: 0;
+  width: 2000px;               /* Ejemplo: más ancho que el contenedor */
+  height: 100%;
+}
+#game-container {
+  .world {
+  position: absolute; top: 0; left: 0;
+  width: 2000px; /* o el ancho de tu escenario */
+  height: 100%;
+}
+}
