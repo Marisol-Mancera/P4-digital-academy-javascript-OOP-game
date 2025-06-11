@@ -27,6 +27,7 @@ body {
   background-color: #07a07c;
   border-radius: 50%;
   border: 5px solid #07a050;
+  z-index: 1;
 }
 
 .moneda {
@@ -63,3 +64,12 @@ body {
   background-repeat: no-repeat;
   z-index: 0;                   /* detrás de personaje/moneda */
 }
+
+.foreground {
+  position: absolute;      /* Para superponerla a .world */
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;    /* Para que no interfiera con controles */
+  z-index: 2;              /* Por encima de .world (z-index:0) y del personaje */
+}
+
