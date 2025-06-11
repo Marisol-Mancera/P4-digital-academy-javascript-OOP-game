@@ -11,8 +11,8 @@ body {
 }
 #game-container {
   position: relative;
-  width: 800px;
-  height: 400px;
+  width: 800px; 
+  height: 400px; 
   margin: 20px auto;
   border: 10px solid #6d6d6d;
   background: #fff;
@@ -48,13 +48,18 @@ body {
 .world {
   position: absolute;          /* Para poder moverlo con translate */
   top: 0; left: 0;
-  width: 2000px;               /* Ejemplo: más ancho que el contenedor */
+  width: 800px;               /* Ejemplo: más ancho que el contenedor */
   height: 100%;
 }
-#game-container {
-  .world {
-  position: absolute; top: 0; left: 0;
-  width: 2000px; /* o el ancho de tu escenario */
-  height: 100%;
-}
+
+/* Demos caña*/
+/* Tiles de suelo: 32×32 px, extraídos de Floors.png */
+.floor {
+  position: absolute;           /* posición dentro de .world */
+  width: 32px;
+  height: 32px;
+  background-image: url("./PixelCrawler/Environment/Tilesets/Floors_Tiles.png");
+  background-position: 0 0;     /* ajusta al fotograma correcto */
+  background-repeat: no-repeat;
+  z-index: 0;                   /* detrás de personaje/moneda */
 }

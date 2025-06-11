@@ -12,21 +12,41 @@ class Game {
   }
   
   crearEscenario() {
-    this.personaje = new Personaje();
-    this.personaje.container = this.container;
-    this.personaje.world     = this.world;
-    this.world.appendChild(this.personaje.element);   // ← usa .world
-    for (let i = 0; i < 5; i++) {
+  const tileSize   = 32;
+  const floorY     = this.container.clientHeight - tileSize;
+  const tilesCount = 50;
+  const levelWidth = tilesCount * tileSize;
+  this.world.style.width = `${levelWidth}px`;
+
+  // 1) Generar suelo
+  for (let x = 0; x < levelWidth; x += tileSize) {
+    const floor = document.createElement('div');
+    floor.classList.add('floor');
+    floor.style.left = `${x}px`;
+    floor.style.top  = `${floorY}px`;
+    this.world.appendChild(floor);
+  }
+
+  // 2) Añadir personaje
+  this.personaje = new Personaje();
+  this.personaje.container = this.container;
+  this.personaje.world = this.world;
+  this.personaje.game  = this;
+  this.world.appendChild(this.personaje.element);
+
+  // 3) Añadir monedas
+  this.monedas = [];
+  for (let i = 0; i < 5; i++) {
     const moneda = new Moneda();
     this.monedas.push(moneda);
-    this.world.appendChild(moneda.element);         // ← usa .world
+    this.world.appendChild(moneda.element);
   }
 }
 
   agregarEventos() {
 	window.addEventListener("keydown", (e) => this.personaje.mover(e));
     this.checkColisiones();
-}
+  }
   checkColisiones() {
 	  setInterval(() => {
     this.monedas = this.monedas.filter(moneda => {
@@ -72,37 +92,45 @@ class Personaje {
     }
 
     mover(evento) {
-  const maxOffset = this.world.scrollWidth - this.container.clientWidth; 
-  const leftLimit  = 20; // px desde el borde izquierdo
-  const rightLimit = this.container.clientWidth - this.width - 20;
-
+  const game      = this.game;                                            // ← Alias a Game
+  const maxOffset = game.world.scrollWidth - game.container.clientWidth;  // ← world y container de Game
+  const leftLimit  = 20;
+  const rightLimit = game.container.clientWidth - this.width - 20;       // ← Usamos this.width
 
   if (evento.key === "ArrowRight") {
-    // 1) Si el personaje no alcanzó el límite derecho del contenedor:
-    if (this.x < rightLimit) {              
+    if (this.x < rightLimit) {
       this.x += this.velocidad;
-    } else if (this.worldX < maxOffset) {
-      // 2) Si ya está en el límite, movemos el mundo a la izquierda
-      this.worldX = Math.min(this.worldX + this.velocidad, maxOffset);
-      this.world.style.transform = `translateX(-${this.worldX}px)`;
+    } else if (game.worldX < maxOffset) {                                 // ← Referencia correcta
+      game.worldX = Math.min(
+        game.worldX + this.velocidad,                                     // ← Usamos this.velocidad
+        maxOffset
+      );
+      game.world.style.transform = `translateX(-${game.worldX}px)`;      // ← world de Game
     }
   } else if (evento.key === "ArrowLeft") {
-    // 1) Si el personaje no alcanzó el límite izquierdo:
     if (this.x > leftLimit) {
       this.x -= this.velocidad;
-    } else if (this.worldX > 0) {
-      // 2) Si está en el límite izquierdo, movemos el mundo a la derecha
-      this.worldX = Math.max(this.worldX - this.velocidad, 0);
-      this.world.style.transform = `translateX(-${this.worldX}px)`;
+    } else if (game.worldX > 0) {
+      game.worldX = Math.max(game.worldX - this.velocidad, 0);
+      game.world.style.transform = `translateX(-${game.worldX}px)`;
     }
-  } else if ((evento.code === "Space" || evento.key === " ") && this.jumpCount < 2 && !this.spacePressed) {
-    evento.preventDefault();
-    this.spacePressed = true;
-    this.saltar();
-  }
-  
+  } else if (
+  evento.code === "Space" &&                                      // ← 1) Solo event.code
+  this.jumpCount < 2 &&                                           // ← 2) Hasta dos saltos
+  (                                                               // ← 3) Condición compuesta:
+    (!this.spacePressed && !evento.repeat) ||                     //     • Primer salto: keydown inicial
+    (evento.repeat && this.jumpCount === 1)                       //     • Segundo salto: key repeat tras primer salto
+  )
+) {
+  evento.preventDefault();                                        // ← 4) Evitamos scroll o efectos por defecto
+  this.spacePressed = true;                                       // ← 5) Marcamos la barra como pulsada
+  this.saltar();                                                  // ← 6) Ejecutamos el salto (incrementa jumpCount)
+}
+
+
   this.actualizarPosicion();
 }
+
 
     saltar() {
         if (this._saltoTimer){
@@ -143,7 +171,6 @@ class Personaje {
     }
         }, 20);
 }
-
 
     actualizarPosicion(){
         this.element.style.left = `${this.x}px`;
