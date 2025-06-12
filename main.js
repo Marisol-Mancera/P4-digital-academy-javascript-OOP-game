@@ -31,12 +31,21 @@ class Game {
     this.personaje.game      = this;
     this.foreground.appendChild(this.personaje.element);
 
+  /// 3.1) Ajustar vertical para que quede a 100px del fondo
+   const bottomMarginPersonaje = 100;
+   const personajeHeight = this.personaje.height;  
+   const newY = this.container.clientHeight - personajeHeight - bottomMarginPersonaje;
+   this.personaje.y       = newY;
+   this.personaje.groundY = newY;
+   this.personaje.actualizarPosicion();
+
+
     // 3) Añadir obstáculos a lo largo de todo el nivel
-    this.obstaculos = [];
-    const obstacleCount = Math.ceil(levelWidth / 200); // uno cada 200px
-    const topMargin      = 20;
-    const bottomMargin   = 30;
-    const maxY           = floorY - this.personaje.height - bottomMargin;
+  this.obstaculos = [];
+  const obstacleCount = Math.ceil(levelWidth / 200); // uno cada 200px
+  const topMargin = 20;
+  const bottomMarginObs = 30;
+  const maxY = floorY - this.personaje.height - bottomMarginObs;
 
     for (let i = 0; i < obstacleCount; i++) {
       const randomX = Math.random() * (levelWidth - tileSize) + tileSize;
@@ -73,16 +82,16 @@ class Game {
 
 class Personaje {
   constructor() {
-    this.x            = 50;
-    this.y            = 300;
-    this.width        = 50;
-    this.height       = 50;
-    this.velocidad    = 10;
-    this.jumpCount    = 0;
-    this.saltoTimer   = null;
-    this.gravedadTimer= null;
+    this.x = 50;
+    this.y = 300;
+    this.width = 200;
+    this.height = 200 ;
+    this.groundY = this.y;
+    this.velocidad = 10;
+    this.jumpCount = 0;
+    this.saltoTimer = null;
+    this.gravedadTimer = null;
     this.spacePressed = false;
-
     // Liberar flag al soltar Space
     window.addEventListener("keyup", e => {
       if (e.code === "Space") this.spacePressed = false;
@@ -94,6 +103,7 @@ class Personaje {
   }
 
   mover(evento) {
+    console.log("mover() fired:", evento.key, "this.game =", this.game);
     const game      = this.game;
     const maxOffset = game.world.scrollWidth - game.container.clientWidth;
     const leftLimit = 20;
@@ -144,8 +154,12 @@ class Personaje {
 
   saltar() {
     if (this.saltoTimer) clearInterval(this.saltoTimer);
-    this.jumpCount++;
-    const alturaMaxima = this.y - (this.jumpCount === 1 ? 100 : this.y);
+  this.jumpCount++;
+
+  // 2) Altura máxima relativa a groundY, no a y actual
+  const saltoSimple = 100;
+  const saltoDoble  = 170;
+  const alturaMaxima = this.groundY - (this.jumpCount === 1 ? saltoSimple : saltoDoble);
 
     this.saltoTimer = setInterval(() => {
       if (this.y > alturaMaxima) {
@@ -163,7 +177,7 @@ class Personaje {
     if (this.gravedadTimer) clearInterval(this.gravedadTimer);
 
     this.gravedadTimer = setInterval(() => {
-      if (this.y < 300) {
+      if (this.y < this.groundY) {
         this.y += 10;
         this.actualizarPosicion();
       } else {
