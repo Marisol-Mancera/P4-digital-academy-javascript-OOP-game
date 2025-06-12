@@ -5,7 +5,7 @@ class Game {
     this.foreground  = this.container.querySelector(".foreground");
     this.worldX      = 0;
     this.personaje   = null;
-    this.monedas     = [];
+    this.obstaculos  = [];
     this.puntuacion  = 0;
 
     this.crearEscenario();
@@ -17,45 +17,35 @@ class Game {
     const tileSize   = 32;
     const floorY     = this.container.clientHeight - tileSize;
 
-    // 1) Definir ancho del mundo: 5× el contenedor
+    // 1) Definir ancho del mundo: 5× el ancho del contenedor
     const tilesCount = Math.ceil(this.container.clientWidth * 5 / tileSize);
     const levelWidth = tilesCount * tileSize;
     this.world.style.width = `${levelWidth}px`;
 
-    // 2) Generar suelo con variantes de sprite
-    const variants = [0, 32, 64, 96];
-    for (let i = 0; i < tilesCount; i++) {
-      const x     = i * tileSize;
-      const floor = document.createElement("div");
-      floor.classList.add("floor");
-      floor.style.left = `${x}px`;
-      floor.style.top  = `${floorY}px`;
+    // (Se elimina la generación de .floor; ahora el background es CSS)
 
-      // variante aleatoria de sprite
-      const variantX = variants[Math.floor(Math.random() * variants.length)];
-      floor.style.backgroundPosition = `-${variantX}px 0`;
-
-      this.world.appendChild(floor);
-    }
-
-    // 3) Añadir personaje en capa estática (.foreground)
+    // 2) Añadir personaje en la capa estática (.foreground)
     this.personaje = new Personaje();
     this.personaje.container = this.container;
     this.personaje.world     = this.world;
     this.personaje.game      = this;
     this.foreground.appendChild(this.personaje.element);
 
-    // 4) Añadir monedas a lo largo de todo el nivel
-    this.monedas = [];
-    const coinCount = Math.ceil(levelWidth / 200); // una moneda cada 200px
-    for (let i = 0; i < coinCount; i++) {
+    // 3) Añadir obstáculos a lo largo de todo el nivel
+    this.obstaculos = [];
+    const obstacleCount = Math.ceil(levelWidth / 200); // uno cada 200px
+    const topMargin      = 20;
+    const bottomMargin   = 30;
+    const maxY           = floorY - this.personaje.height - bottomMargin;
+
+    for (let i = 0; i < obstacleCount; i++) {
       const randomX = Math.random() * (levelWidth - tileSize) + tileSize;
-      const randomY = Math.random() * (floorY   - tileSize) + tileSize;
-      const moneda  = new Moneda(randomX, randomY);
-      this.monedas.push(moneda);
-      this.world.appendChild(moneda.element);
+      const randomY = Math.random() * (maxY - topMargin) + topMargin;
+      const enemigo = new Enemigo(randomX, randomY);
+      this.obstaculos.push(enemigo);
+      this.world.appendChild(enemigo.element);
     }
-  } // ← fin de crearEscenario()
+  } // fin de crearEscenario()
 
   agregarEventos() {
     window.addEventListener("keydown", e => this.personaje.mover(e));
@@ -64,10 +54,10 @@ class Game {
 
   checkColisiones() {
     setInterval(() => {
-      this.monedas = this.monedas.filter(moneda => {
-        if (this.personaje.colisionaCon(moneda)) {
-          this.world.removeChild(moneda.element);
-          this.actualizarPuntuacion(10);
+      this.obstaculos = this.obstaculos.filter(enemigo => {
+        if (this.personaje.colisionaCon(enemigo)) {
+          this.world.removeChild(enemigo.element);
+          this.actualizarPuntuacion(-10);  // resta puntos
           return false;
         }
         return true;
@@ -93,7 +83,7 @@ class Personaje {
     this.gravedadTimer= null;
     this.spacePressed = false;
 
-    // liberar flag al soltar Space
+    // Liberar flag al soltar Space
     window.addEventListener("keyup", e => {
       if (e.code === "Space") this.spacePressed = false;
     });
@@ -108,29 +98,36 @@ class Personaje {
     const maxOffset = game.world.scrollWidth - game.container.clientWidth;
     const leftLimit = 20;
     const rightLimit= game.container.clientWidth - this.width - 20;
-    const centerX   = game.container.clientWidth / 2 - this.width / 2;
 
-    // Movimiento derecha: scroll y personaje al centro
+    // Movimiento DERECHA: primero mover personaje, luego scroll + centrado
     if (evento.key === "ArrowRight") {
-      if (game.worldX < maxOffset) {
+      const centerX = game.container.clientWidth / 2 - this.width / 2;
+
+      // 1) Mover hasta centro si no se ha desplazado mundo aún
+      if (this.x < centerX && game.worldX === 0) {
+        this.x += this.velocidad;
+
+      // 2) Si queda mundo por desplazar, desplazar y fijar personaje en centro
+      } else if (game.worldX < maxOffset) {
         game.worldX = Math.min(game.worldX + this.velocidad, maxOffset);
         game.world.style.transform = `translateX(-${game.worldX}px)`;
         this.x = centerX;
+
+      // 3) Cuando no queda scroll, mover personaje al borde derecho
       } else if (this.x < rightLimit) {
         this.x += this.velocidad;
       }
 
-    // Movimiento izquierda: scroll y personaje al centro
+    // Movimiento IZQUIERDA: solo scroll o mover al borde
     } else if (evento.key === "ArrowLeft") {
       if (game.worldX > 0) {
         game.worldX = Math.max(game.worldX - this.velocidad, 0);
         game.world.style.transform = `translateX(-${game.worldX}px)`;
-        this.x = centerX;
       } else if (this.x > leftLimit) {
         this.x -= this.velocidad;
       }
 
-    // Doble salto: inicial o repeat tras primer salto
+    // Doble salto: keydown inicial o repeat tras primer salto
     } else if (
       evento.code === "Space" &&
       this.jumpCount < 2 &&
@@ -148,7 +145,7 @@ class Personaje {
   saltar() {
     if (this.saltoTimer) clearInterval(this.saltoTimer);
     this.jumpCount++;
-    let alturaMaxima = this.y - (this.jumpCount === 1 ? 100 : this.y);
+    const alturaMaxima = this.y - (this.jumpCount === 1 ? 100 : this.y);
 
     this.saltoTimer = setInterval(() => {
       if (this.y > alturaMaxima) {
@@ -184,24 +181,24 @@ class Personaje {
 
   // detección de colisión compensando scroll
   colisionaCon(objeto) {
-    const coinX = objeto.x - this.game.worldX;
+    const obsX = objeto.x - this.game.worldX;
     return (
-      this.x < coinX + objeto.width &&
-      this.x + this.width > coinX &&
+      this.x < obsX + objeto.width &&
+      this.x + this.width > obsX &&
       this.y < objeto.y + objeto.height &&
       this.y + this.height > objeto.y
     );
   }
 }
 
-class Moneda {
+class Enemigo {
   constructor(x, y) {
     this.x      = x;
     this.y      = y;
     this.width  = 30;
     this.height = 30;
     this.element= document.createElement("div");
-    this.element.classList.add("moneda");
+    this.element.classList.add("enemigo");
     this.actualizarPosicion();
   }
 

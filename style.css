@@ -9,13 +9,15 @@ body {
   height: 100vh;
   flex-direction: column;
 }
+
 #game-container {
   position: relative;
   width: 800px; 
   height: 400px; 
   margin: 20px auto;
   border: 10px solid #6d6d6d;
-  background: #fff;
+  background: url("./PixelCrawler/BGrounds/battleback1.png") bottom center no-repeat;
+  background-size: cover;
   overflow: hidden;
   border-radius: 30px;
 }
@@ -30,15 +32,14 @@ body {
   z-index: 1;
 }
 
-.moneda {
+.enemigo {
   position: absolute;
   width: 30px;
   height: 30px;
-  background-color: gold;
-  border-radius: 50%;
-  box-shadow: 0 0 10px 2px rgba(255, 223, 0, 0.8);
+  background-color: crimson;           /* color de relleno (puedes sustituir por imagen) */
+  border-radius: 50%;                   /* circulares como monedas */
+  z-index: 1;                           /* por encima del suelo, bajo el personaje */
 }
-
 #puntos {
   font-size: 20px;
   text-align: center;
@@ -51,18 +52,6 @@ body {
   top: 0; left: 0;
   width: 800px;               /* Ejemplo: más ancho que el contenedor */
   height: 100%;
-}
-
-/* Demos caña*/
-/* Tiles de suelo: 32×32 px, extraídos de Floors.png */
-.floor {
-  position: absolute;           /* posición dentro de .world */
-  width: 32px;
-  height: 32px;
-  background-image: url("./PixelCrawler/Environment/Tilesets/Floors_Tiles.png");
-  background-position: 0 0;     /* ajusta al fotograma correcto */
-  background-repeat: no-repeat;
-  z-index: 0;                   /* detrás de personaje/moneda */
 }
 
 .foreground {
