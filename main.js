@@ -1,94 +1,56 @@
 class Game {
   constructor() {
-    this.container   = document.getElementById("game-container");
-    this.world       = this.container.querySelector(".world");
-    this.foreground  = this.container.querySelector(".foreground");
-    this.worldX      = 0;
-    this.personaje   = null;
-    this.obstaculos  = [];
-    this.puntuacion  = 0;
+    this.container = document.getElementById("game-container");
+    this.puntosElement = document.getElementById("puntos");
+    this.personaje = null;
+    this.enemigos1 = [];
+    this.enemigos2 = [];
+    this.puntuacion = 100;
 
     this.crearEscenario();
     this.agregarEventos();
-
-    // Bucle que mueve obstáculos hacia el personaje
-    const gameLoop = () => {
-      const targetX = this.personaje.x + this.worldX;
-      this.obstaculos.forEach(obs => {
-        if (typeof obs.moveTowards === 'function') {
-          obs.moveTowards(targetX);
-        }
-      });
-      requestAnimationFrame(gameLoop);
-    };
-    requestAnimationFrame(gameLoop);
-
-    this.puntosElement = document.getElementById("puntos");
+    this.generarEnemigos1Continuamente();
   }
 
   crearEscenario() {
-    const tileSize   = 32;
-    const floorY     = this.container.clientHeight - tileSize;
-
-    // 1) Definir ancho del mundo: 10× el ancho del contenedor
-    const tilesCount = Math.ceil(this.container.clientWidth * 10 / tileSize);
-    const levelWidth = tilesCount * tileSize;
-    this.world.style.width = `${levelWidth}px`;
-
-    // 2) Añadir personaje en .foreground
     this.personaje = new Personaje();
     this.personaje.container = this.container;
-    this.personaje.world     = this.world;
-    this.personaje.game      = this;
-    this.foreground.appendChild(this.personaje.element);
+    this.container.appendChild(this.personaje.element);
 
-    // 3) Posicionar personaje a 30px del fondo
-    const bottomMargin = 30;
-    const h            = this.personaje.height;
-    const newY         = this.container.clientHeight - h - bottomMargin;
-    this.personaje.y       = newY;
-    this.personaje.groundY = newY;
-    this.personaje.actualizarPosicion();
-
-    // 4) Generar obstáculos de dos tipos
-    this.obstaculos    = [];
-    const obstacleCount = Math.ceil(levelWidth / 200);
-    const saltoSimple   = this.personaje.saltoSimple;
-    const minY          = this.personaje.groundY - saltoSimple;
-    const maxY          = this.personaje.groundY;
-
-    for (let i = 0; i < obstacleCount; i++) {
-      const x = Math.random() * (levelWidth - tileSize) + tileSize;
-
-      if (i % 2 === 0) {
-        // Enemigo terrestre: en el suelo
-        const y       = this.personaje.groundY;
-        const enemigo = new Enemigo(x, y, this.personaje.height);
-        this.obstaculos.push(enemigo);
-        this.world.appendChild(enemigo.element);
-
-      } else {
-        // Enemigo volador: dentro del rango de salto
-        const y        = Math.random() * (maxY - minY) + minY;
-        const enemigo2 = new Enemigo2(x, y);
-        this.obstaculos.push(enemigo2);
-        this.world.appendChild(enemigo2.element);
-      }
+    for (let i = 0; i < 2; i++) {
+      const enemigo2 = new Enemigo2();
+      this.enemigos2.push(enemigo2);
+      this.container.appendChild(enemigo2.element);
     }
   }
 
   agregarEventos() {
-    // mover() solo gestiona salto; el bucle RAF hace horizontal
-    window.addEventListener("keydown", e => this.personaje.mover(e));
-    window.addEventListener("keyup",   e => this.personaje.finMover(e));
+    window.addEventListener("keydown", (e) => this.personaje.mover(e));
+    window.addEventListener("keyup", (e) => this.personaje.finMover(e));
     this.checkColisiones();
+    this.loop();
+  }
+
+  loop() {
+    setInterval(() => {
+      this.enemigos1.forEach(enemigo => enemigo.perseguir(this.personaje.x));
+    }, 50);
   }
 
   checkColisiones() {
     setInterval(() => {
-      this.obstaculos = this.obstaculos.filter(obs => {
-        if (this.personaje.colisionaCon(obs)) {
-          this.world.removeChild(obs.element);
+      this.enemigos1 = this.enemigos1.filter(enemigo => {
+        if (this.personaje.colisionaCon(enemigo)) {
+          this.container.removeChild(enemigo.element);
+          this.actualizarPuntuacion(-10);
+          return false;
+        }
+        return true;
+      });
+
+      this.enemigos2 = this.enemigos2.filter(enemigo2 => {
+        if (this.personaje.colisionaCon(enemigo2)) {
+          this.container.removeChild(enemigo2.element);
           this.actualizarPuntuacion(-10);
           return false;
         }
@@ -97,79 +59,89 @@ class Game {
     }, 100);
   }
 
+  generarEnemigos1Continuamente() {
+    setInterval(() => {
+      const enemigo = new Enemigo();
+      this.enemigos1.push(enemigo);
+      this.container.appendChild(enemigo.element);
+    }, 2000); // cada 2 segundos
+  }
+
   actualizarPuntuacion(puntos) {
     this.puntuacion += puntos;
     this.puntosElement.textContent = `Puntos: ${this.puntuacion}`;
   }
 }
 
+// Resto del código permanece igual...
+
 class Personaje {
   constructor() {
-    this.x             = 50;
-    this.y             = 300;
-    this.width         = 200;
-    this.height        = 200;
-    this.groundY       = this.y;
-    this.velocidad     = 14;
-    this.jumpCount     = 0;
-    this.saltoTimer    = null;
+    this.x = 50;
+    this.y = 0;
+    this.width = 64;
+    this.height = 100;
+    this.velocidad = 10;
+    this.rightPressed = false;
+    this.leftPressed = false;
+    this.jumpCount = 0;
+    this.saltoTimer = null;
     this.gravedadTimer = null;
-    this.spacePressed  = false;
-    this.rightPressed  = false;
-    this.leftPressed   = false;
-    this.saltoSimple   = 100;  // altura primer salto
-    this.saltoDoble    = 170;  // altura segundo salto
-
-    // Listeners de teclado
-    window.addEventListener("keydown", e => {
-      if (e.key === "ArrowRight") this.rightPressed = true;
-      if (e.key === "ArrowLeft")  this.leftPressed  = true;
-      if (e.code === "Space" &&
-          this.jumpCount < 2 &&
-          ((!this.spacePressed && !e.repeat) ||
-           (e.repeat && this.jumpCount === 1))
-      ) {
-        e.preventDefault();
-        this.spacePressed = true;
-        this.saltar();
-      }
-    });
-    window.addEventListener("keyup", e => {
-      if (e.key === "ArrowRight") this.rightPressed = false;
-      if (e.key === "ArrowLeft")  this.leftPressed  = false;
-      if (e.code === "Space")     this.spacePressed = false;
-    });
+    this.spacePressed = false;
+    this.saltoSimple = 100;
+    this.saltoDoble = 170;
 
     this.element = document.createElement("div");
     this.element.classList.add("personaje");
+    this.element.style.width = `${this.width}px`;
+    this.element.style.height = `${this.height}px`;
+
+    this.groundY = 600 - this.height;
+    this.y = this.groundY;
     this.actualizarPosicion();
 
-    // Bucle de movimiento continuo
-    const loop = () => {
-      this._moverEnAire();
+    this.loop();
+  }
+
+  loop() {
+    setInterval(() => {
+      if (this.rightPressed) {
+        this.x = Math.min(this.x + this.velocidad, 1200 - this.width);
+      }
+      if (this.leftPressed) {
+        this.x = Math.max(this.x - this.velocidad, 0);
+      }
       this.actualizarPosicion();
-      requestAnimationFrame(loop);
-    };
-    requestAnimationFrame(loop);
+    }, 20);
   }
 
-  mover(evento) {
-    // Solo necesario para salto; horizontal lo hace el bucle
+  mover(e) {
+    if (e.key === "ArrowRight") this.rightPressed = true;
+    if (e.key === "ArrowLeft") this.leftPressed = true;
+    if (e.code === "Space" && this.jumpCount < 2 && !this.spacePressed) {
+      this.spacePressed = true;
+      this.saltar();
+    }
   }
 
-  finMover(evento) {
-    // Mantenido en keyup
+  finMover(e) {
+    if (e.key === "ArrowRight") this.rightPressed = false;
+    if (e.key === "ArrowLeft") this.leftPressed = false;
+    if (e.code === "Space") this.spacePressed = false;
   }
 
   saltar() {
     if (this.saltoTimer) clearInterval(this.saltoTimer);
+    if (this.gravedadTimer) clearInterval(this.gravedadTimer);
+
     this.jumpCount++;
-    const saltoAltura = (this.jumpCount === 1 ? this.saltoSimple : this.saltoDoble);
-    const targetY     = this.groundY - saltoAltura;
+    const saltoAltura = this.jumpCount === 1 ? this.saltoSimple : this.saltoDoble;
+    const targetY = this.y - saltoAltura;
 
     this.saltoTimer = setInterval(() => {
       if (this.y > targetY) {
         this.y -= 10;
+        this.actualizarPosicion();
       } else {
         clearInterval(this.saltoTimer);
         this.caer();
@@ -181,112 +153,76 @@ class Personaje {
     if (this.gravedadTimer) clearInterval(this.gravedadTimer);
 
     this.gravedadTimer = setInterval(() => {
-      // Avanzar vertical sin pasarse de groundY
-      this.y = Math.min(this.y + 10, this.groundY);
-      if (this.y === this.groundY) {
+      this.y += 10;
+      if (this.y >= this.groundY) {
+        this.y = this.groundY;
+        this.jumpCount = 0;
         clearInterval(this.gravedadTimer);
         this.gravedadTimer = null;
-        this.jumpCount = 0;
       }
+      this.actualizarPosicion();
     }, 20);
-  }
-
-  _moverEnAire() {
-    const game      = this.game;
-    const maxOffset = game.world.scrollWidth - game.container.clientWidth;
-    const centerX   = game.container.clientWidth/2 - this.width/2;
-    const rightLimit= game.container.clientWidth - this.width - 20;
-
-    if (this.rightPressed) {
-      if (this.x < centerX && game.worldX === 0) {
-        this.x += this.velocidad;
-      } else if (game.worldX < maxOffset) {
-        game.worldX = Math.min(game.worldX + this.velocidad, maxOffset);
-        game.world.style.transform = `translateX(-${game.worldX}px)`;
-        game.container.style.backgroundPositionX = `-${game.worldX/2}px`;
-        this.x = centerX;
-      } else if (this.x < rightLimit) {
-        this.x += this.velocidad;
-      }
-    }
-
-    if (this.leftPressed) {
-      if (game.worldX > 0) {
-        game.worldX = Math.max(game.worldX - this.velocidad, 0);
-        game.world.style.transform = `translateX(-${game.worldX}px)`;
-        game.container.style.backgroundPositionX = `-${game.worldX/2}px`;
-      } else if (this.x > 20) {
-        this.x -= this.velocidad;
-      }
-    }
   }
 
   actualizarPosicion() {
     this.element.style.left = `${this.x}px`;
-    this.element.style.top  = `${this.y}px`;
+    this.element.style.top = `${this.y}px`;
   }
 
   colisionaCon(objeto) {
-    const obsX       = objeto.x - this.game.worldX;
-    // Hitbox reducido: 10px inset X, 20px inset Y
-    const left   = this.x + 10;
-    const right  = this.x + this.width - 10;
-    const top    = this.y + 20;
-    const bottom = this.y + this.height;
     return (
-      left   < obsX + objeto.width &&
-      right  > obsX &&
-      top    < objeto.y + objeto.height &&
-      bottom > objeto.y
+      this.x < objeto.x + objeto.width &&
+      this.x + this.width > objeto.x &&
+      this.y < objeto.y + objeto.height &&
+      this.y + this.height > objeto.y
     );
   }
 }
 
 class Enemigo {
-  constructor(x, y, size = 180) {
-    this.x       = x;
-    this.y       = y;
-    this.width   = size;
-    this.height  = size;
+  constructor() {
+    this.width = 30;
+    this.height = 30;
+    this.x = Math.random() * (1200 - this.width - 100) + 100;
+    this.y = 600 - this.height;
     this.element = document.createElement("div");
     this.element.classList.add("enemigo");
-    this.element.style.width  = `${size}px`;
-    this.element.style.height = `${size}px`;
+    this.element.style.width = `${this.width}px`;
+    this.element.style.height = `${this.height}px`;
     this.actualizarPosicion();
   }
 
-  moveTowards(targetX, speed = 2) {
-    this.x += (this.x < targetX ? speed : -speed);
+  perseguir(targetX, velocidad = 2) {
+    if (this.x < targetX) this.x += velocidad;
+    else if (this.x > targetX) this.x -= velocidad;
     this.actualizarPosicion();
   }
 
   actualizarPosicion() {
     this.element.style.left = `${this.x}px`;
-    this.element.style.top  = `${this.y}px`;
+    this.element.style.top = `${this.y}px`;
   }
 }
 
 class Enemigo2 {
-  constructor(x, y, size = 120) {
-    this.x       = x;
-    this.y       = y;
-    this.width   = size;
-    this.height  = size;
+  constructor() {
+    this.width = 24;
+    this.height = 24;
+    this.x = Math.random() * (1200 - this.width - 100) + 100;
+    const minY = 200;
+    const maxY = 600 - 150;
+    this.y = Math.random() * (maxY - minY) + minY;
+
     this.element = document.createElement("div");
     this.element.classList.add("enemigo2");
-    this.element.style.width  = `${size}px`;
-    this.element.style.height = `${size}px`;
-    this.actualizarPosicion();
-  }
-
-  moveTowards(targetX, speed = 1.5) {
-    this.x += (this.x < targetX ? speed : -speed);
+    this.element.style.width = `${this.width}px`;
+    this.element.style.height = `${this.height}px`;
     this.actualizarPosicion();
   }
 
   actualizarPosicion() {
     this.element.style.left = `${this.x}px`;
-    this.element.style.top  = `${this.y}px`;
+    this.element.style.top = `${this.y}px`;
   }
 }
 
