@@ -1,5 +1,3 @@
-// main.js
-
 class Game {
   constructor() {
     this.container = document.getElementById("game-container");
@@ -7,7 +5,7 @@ class Game {
     this.personaje = null;
     this.enemigos1 = [];
     this.enemigos2 = [];
-    this.puntuacion = 10; // Puntuación inicial antes de empezar el juego
+    this.puntuacion = 30; // Puntuación inicial antes de empezar el juego
     this.gameIntervals = []; // Array para guardar los IDs de los setInterval
     this.gameOver = false; // Flag para el estado de GAME OVER
     this.gameStarted = false; // Flag para saber si el juego ha empezado
@@ -124,6 +122,7 @@ class Game {
       const enemigo2 = new Enemigo2();
       this.enemigos2.push(enemigo2);
       this.container.appendChild(enemigo2.element);
+      enemigo2.loop();
     }
   }
 
@@ -150,29 +149,36 @@ class Game {
 
   checkColisiones() {
     const checkColisionesId = setInterval(() => {
-      if (this.gameOver || !this.gameStarted) return; // Condición para detener las colisiones si no está iniciado
+      if (this.gameOver || !this.gameStarted) return;
 
       this.enemigos1 = this.enemigos1.filter((enemigo) => {
         if (this.personaje.colisionaCon(enemigo)) {
-          this.container.removeChild(enemigo.element);
-          this.actualizarPuntuacion(-6); // Enemigo (jabalí) resta 6 puntos
-          return false;
+          // --- CORRECCIÓN AQUÍ: Verificar si el elemento es hijo antes de remover ---
+          if (this.container.contains(enemigo.element)) {
+            this.container.removeChild(enemigo.element);
+          }
+          // --- FIN CORRECCIÓN ---
+          this.actualizarPuntuacion(-6);
+          return false; // Elimina el enemigo del array
         }
         return true;
       });
 
       this.enemigos2 = this.enemigos2.filter((enemigo2) => {
         if (this.personaje.colisionaCon(enemigo2)) {
-          this.container.removeChild(enemigo2.element);
-          this.actualizarPuntuacion(3); // Enemigo2 (orbe) suma 3 puntos
-          return false;
+          // --- CORRECCIÓN AQUÍ: Verificar si el elemento es hijo antes de remover ---
+          if (this.container.contains(enemigo2.element)) { // Aunque no de error aquí, es buena práctica
+            this.container.removeChild(enemigo2.element);
+          }
+          // --- FIN CORRECCIÓN ---
+          this.actualizarPuntuacion(3);
+          return false; // Elimina el enemigo del array
         }
         return true;
       });
     }, 100);
-    this.gameIntervals.push(checkColisionesId); // Guardamos el ID
+    this.gameIntervals.push(checkColisionesId);
   }
-
   generarEnemigos1Continuamente() {
     const genEnemigo1Id = setInterval(() => {
       if (!this.gameOver && this.gameStarted) { // Condición para detener la generación
@@ -180,7 +186,7 @@ class Game {
         this.enemigos1.push(enemigo);
         this.container.appendChild(enemigo.element);
       }
-    }, 2000); // cada 2 segundos
+    }, 4000); // cada 2 segundos
     this.gameIntervals.push(genEnemigo1Id); // Guardamos el ID
   }
 
@@ -190,6 +196,7 @@ class Game {
         const enemigo2 = new Enemigo2();
         this.enemigos2.push(enemigo2);
         this.container.appendChild(enemigo2.element);
+        enemigo2.loop();
       }
     }, 1500); // Genera un Enemigo2 cada 1.5 segundos
     this.gameIntervals.push(genEnemigo2Id); // Guardamos el ID
@@ -521,7 +528,22 @@ class Personaje {
       this.y + this.height > objeto.y
     );
   }
+
+  aumentarTamano(aumentoPx) {
+        // Aumenta el ancho y el alto actuales del personaje
+        this.width += aumentoPx;
+        this.height += aumentoPx;
+
+        // Ajusta la posición Y para que el personaje "crezca hacia arriba"
+        // (es decir, su base permanezca en el suelo)
+        this.y = this.groundY - (this.height - 100); // 100 es la altura inicial
+
+        // Vuelve a aplicar el tamaño y la posición al elemento HTML
+        this.actualizarPosicion();
+        console.log(`¡Personaje ha crecido! Nuevo tamaño: ${this.width}x${this.height}px`);
+    }
 }
+
 
 // --- CLASE ENEMIGO (Jabalí) ---
 class Enemigo {
@@ -552,8 +574,8 @@ class Enemigo {
 // --- CLASE ENEMIGO2 (Orbe Volador) ---
 class Enemigo2 {
   constructor() {
-    this.width = 24;
-    this.height = 24;
+    this.width = 48;
+    this.height = 48;
     this.x = Math.random() * (1200 - this.width);
     this.y = -this.height;
     this.velocidadCaida = Math.random() * 2 + 1;
@@ -562,15 +584,32 @@ class Enemigo2 {
     this.element.classList.add("enemigo2");
     this.element.style.width = `${this.width}px`;
     this.element.style.height = `${this.height}px`;
-    this.actualizarPosicion();
 
-    // El loop del enemigo2 ahora se iniciará solo cuando el juego comience
-    // Eliminado: this.loop();
+    // --- CÓDIGO NUEVO PARA IMÁGENES ALEATORIAS DE ORBES ---
+    // Define las rutas a tus imágenes de orbes.
+    // ASEGÚRATE de que estos nombres de archivo coincidan exactamente
+    // con los nombres de tus PNGs en la misma carpeta.
+    const orbImages = [
+      "assets/orb1.png",   // <--- Rutas con "assets/" y comillas dobles
+      "assets/orb2.png",
+      "assets/orb3.png",
+      "assets/orb4.png"
+    ];
+
+    // Selecciona una imagen al azar del array
+    const randomImage = orbImages[Math.floor(Math.random() * orbImages.length)];
+
+    // Asigna la imagen de fondo al elemento del orbe
+    this.element.style.backgroundImage = `url("${randomImage}")`;
+    this.element.style.backgroundSize = "cover"; // Ajusta la imagen para que cubra el elemento
+    this.element.style.backgroundPosition = "center"; // Centra la imagen dentro del elemento
+    this.element.style.backgroundRepeat = "no-repeat"; // Evita que la imagen se repita
+
+    this.actualizarPosicion();
   }
 
   loop() {
     setInterval(() => {
-      // Solo mover si el juego ha iniciado y no ha terminado
       if (juego.gameStarted && !juego.gameOver) {
         this.caer();
       }

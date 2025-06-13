@@ -76,11 +76,10 @@ body {
 /* Enemigo2 volador (fantasma u otro sprite) */
 .enemigo2 {
   position: absolute;
-  /* width: 24px; <-- Elimina esta línea */
-  /* height: 24px; <-- Elimina esta línea */
-  background-image: url("./assets/tile_0121.png");
-  background-size: 24px 24px;
-  background-position: 0 0;
+  width: 48px; /*<-- Elimina esta línea */
+  height: 48px; /*<-- Elimina esta línea */
+  border-radius: 50%;
+  background-position: center;
   background-repeat: no-repeat;
   z-index: 1;
 }
