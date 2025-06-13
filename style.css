@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&display=swap');
+
 body {
   margin: 0;
   font-family: Arial, sans-serif;
@@ -47,23 +49,23 @@ body {
 }
 
 /* Personaje reducido con sprite */
+/* Personaje reducido con sprite */
 .personaje {
   position: absolute;
-  width: 48px;
-  height: 48px;
+  /* width: 48px; <-- Elimina esta línea */
+  /* height: 48px; <-- Elimina esta línea */
   background-image: url("./assets/Run-Sheet.png");
-  background-size: 384px 64px; /* hoja completa */
-  background-position: 0 0;    /* primer frame */
+  background-size: 384px 64px;
+  background-position: 0 0;
   background-repeat: no-repeat;
   z-index: 1;
 }
 
-
 /* Enemigo terrestre (jabalí) */
 .enemigo {
   position: absolute;
-  width: 40px;
-  height: 30px;
+  /* width: 40px; <-- Elimina esta línea */
+  /* height: 30px; <-- Elimina esta línea */
   background-image: url("./assets/Run-Sheet-Boar.png");
   background-size: 288px 32px;
   background-position: 0 0;
@@ -71,14 +73,13 @@ body {
   z-index: 1;
 }
 
-
 /* Enemigo2 volador (fantasma u otro sprite) */
 .enemigo2 {
   position: absolute;
-  width: 24px;
-  height: 24px;
+  /* width: 24px; <-- Elimina esta línea */
+  /* height: 24px; <-- Elimina esta línea */
   background-image: url("./assets/tile_0121.png");
-  background-size: 24px 24px; /* escalar suavemente */
+  background-size: 24px 24px;
   background-position: 0 0;
   background-repeat: no-repeat;
   z-index: 1;
