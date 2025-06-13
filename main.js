@@ -1,19 +1,30 @@
 class Game {
   constructor() {
+    // Inicialización de elementos del DOM
     this.container = document.getElementById("game-container");
     this.puntosElement = document.getElementById("puntos");
-    this.personaje = null;
-    this.enemigos1 = [];
-    this.enemigos2 = [];
-    this.puntuacion = 30; // Puntuación inicial antes de empezar el juego
-    this.gameIntervals = []; // Array para guardar los IDs de los setInterval
-    this.gameOver = false; // Flag para el estado de GAME OVER
-    this.gameStarted = false; // Flag para saber si el juego ha empezado
 
-    this.mostrarInstrucciones(); // Mostrar instrucciones al inicio
+    // Inicialización de entidades del juego
+    this.personaje = null;
+    this.enemigos1 = []; // Array para los jabalíes
+    this.enemigos2 = []; // Array para los orbes voladores
+
+    // Variables de estado del juego
+    this.puntuacion = 10; // Puntuación inicial del jugador
+    this.gameIntervals = []; // Almacena los IDs de los intervalos para poder limpiarlos
+    this.gameOver = false; // Flag que indica si el juego ha terminado
+    this.gameStarted = false; // Flag que indica si el juego ha comenzado tras las instrucciones
+
+    // Configuración del audio de fondo
+    this.bgMusic = new Audio("Sonidos/As-far-as-the-eye.mp3"); // Carga el archivo de música de fondo
+    this.bgMusic.loop = true; // Configura la música para que se repita
+    this.bgMusic.volume = 0.5; // Establece el volumen de la música (1.0 es máximo)
+
+    // Muestra las instrucciones del juego al cargar
+    this.mostrarInstrucciones();
   }
 
-  // --- MÉTODO MODIFICADO: mostrarInstrucciones() ---
+  // Muestra la pantalla de instrucciones y el botón de inicio
   mostrarInstrucciones() {
     const instructionsBox = document.createElement("div");
     instructionsBox.id = "instructionsBox";
@@ -24,17 +35,17 @@ class Game {
     instructionsBox.style.backgroundColor = "rgba(0, 0, 0, 0.9)";
     instructionsBox.style.color = "#FFD700";
     instructionsBox.style.fontFamily = "'Cinzel', serif";
-    instructionsBox.style.padding = "20px 40px 25px"; // Ajuste: padding (top right bottom left) -> 20px arriba, 40px lados, 25px abajo
+    instructionsBox.style.padding = "20px 40px 25px";
     instructionsBox.style.borderRadius = "15px";
     instructionsBox.style.textAlign = "center";
     instructionsBox.style.width = "calc(100% - 200px)";
     instructionsBox.style.maxWidth = "1000px";
     instructionsBox.style.height = "auto";
-    instructionsBox.style.maxHeight = "calc(100vh - 40px)"; // Ajuste: Altura máxima de la ventana - 40px (20px arriba y 20px abajo para un margen visual)
-    instructionsBox.style.overflowY = "auto"; // Añade scroll vertical si el contenido es demasiado largo
+    instructionsBox.style.maxHeight = "calc(100vh - 40px)";
+    instructionsBox.style.overflowY = "auto";
     instructionsBox.style.zIndex = "200";
     instructionsBox.style.boxShadow = "0 8px 16px rgba(0, 0, 0, 0.5)";
-    instructionsBox.style.boxSizing = "border-box"; // Asegura que padding y border se incluyan en el width/height
+    instructionsBox.style.boxSizing = "border-box";
 
     let instructionsHTML = `
       <h2 style="font-size: 2.7em; margin-bottom: 15px;">La Esencia del Mago</h2>
@@ -67,9 +78,9 @@ class Game {
 
     const startButton = document.createElement("button");
     startButton.textContent = "¡Empezar Aventura!";
-    startButton.style.marginTop = "20px"; // Ajuste: un poco menos de margen superior para el botón
-    startButton.style.padding = "10px 20px"; // Ajuste: padding del botón ligeramente más pequeño
-    startButton.style.fontSize = "24px"; // Ajuste: tamaño de fuente del botón un poco más pequeño
+    startButton.style.marginTop = "20px";
+    startButton.style.padding = "10px 20px";
+    startButton.style.fontSize = "24px";
     startButton.style.fontWeight = "bold";
     startButton.style.backgroundColor = "#4CAF50";
     startButton.style.color = "white";
@@ -84,7 +95,6 @@ class Game {
     startButton.onmouseover = () => { startButton.style.backgroundColor = "#5cb85c"; };
     startButton.onmouseout = () => { startButton.style.backgroundColor = "#4CAF50"; };
 
-
     startButton.addEventListener("click", () => {
       this.container.removeChild(instructionsBox);
       this.iniciarJuego();
@@ -94,154 +104,166 @@ class Game {
     instructionsBox.appendChild(startButton);
   }
 
-  // --- NUEVO MÉTODO: iniciarJuego() ---
+  // Inicia la lógica principal del juego una vez que se pulsa el botón de empezar
   iniciarJuego() {
     this.gameStarted = true; // Marca el juego como iniciado
-    this.puntuacion = 10; // Reinicia la puntuación al iniciar
+    this.puntuacion = 10; // Reinicia la puntuación al iniciar la partida
     this.puntosElement.textContent = `Puntos: ${this.puntuacion}`; // Actualiza la visualización de puntos
 
-    // Llamadas para iniciar los componentes del juego
+    // Prepara el escenario y los eventos del juego
     this.crearEscenario();
-    this.agregarEventos(); // Esto incluye checkColisiones y loop
-    this.generarEnemigos1Continuamente();
-    this.generarEnemigos2Continuamente();
+    this.agregarEventos();
+    this.generarEnemigos1Continuamente(); // Inicia la generación de jabalíes
+    this.generarEnemigos2Continuamente(); // Inicia la generación de orbes
 
-    // Asegurarse de que el personaje empiece su movimiento
+    // Asegura que el bucle de movimiento del personaje se inicie
     if (this.personaje) {
         this.personaje.loop();
     }
+
+    // Intenta iniciar la música de fondo. Envuelto en un try/catch para manejar promesas.
+    this.bgMusic.play().then(() => {
+        console.log("Música de fondo iniciada correctamente.");
+    }).catch(error => {
+        console.error("Error al iniciar la música de fondo:", error);
+    });
   }
 
+  // Configura el personaje y los orbes iniciales en el escenario
   crearEscenario() {
     this.personaje = new Personaje();
     this.personaje.container = this.container;
     this.container.appendChild(this.personaje.element);
 
-    // Mantenemos la creación inicial de dos enemigos2, aunque luego se generen más continuamente
     for (let i = 0; i < 2; i++) {
       const enemigo2 = new Enemigo2();
       this.enemigos2.push(enemigo2);
       this.container.appendChild(enemigo2.element);
-      enemigo2.loop();
+      enemigo2.loop(); // Inicia el movimiento de los orbes
     }
   }
 
+  // Agrega los event listeners para el control del personaje y las colisiones
   agregarEventos() {
-    // Solo permitimos mover si el juego NO ha terminado y ha empezado
+    // Escucha las teclas para el movimiento del personaje
     window.addEventListener("keydown", (e) => {
       if (!this.gameOver && this.gameStarted) this.personaje.mover(e);
     });
     window.addEventListener("keyup", (e) => {
       if (!this.gameOver && this.gameStarted) this.personaje.finMover(e);
     });
-    this.checkColisiones();
-    this.loop();
+    this.checkColisiones(); // Inicia la detección de colisiones
+    this.loop(); // Inicia el bucle principal de actualización del juego
   }
 
+  // Bucle principal del juego que actualiza la posición de los enemigos
   loop() {
     const loopId = setInterval(() => {
-      if (!this.gameOver && this.gameStarted) { // Condición para detener el loop
+      if (!this.gameOver && this.gameStarted) {
         this.enemigos1.forEach((enemigo) => enemigo.perseguir(this.personaje.x));
       }
     }, 50);
-    this.gameIntervals.push(loopId); // Guardamos el ID
+    this.gameIntervals.push(loopId);
   }
 
+  // Revisa constantemente las colisiones entre el personaje y los enemigos/orbes
   checkColisiones() {
     const checkColisionesId = setInterval(() => {
       if (this.gameOver || !this.gameStarted) return;
 
+      // Colisiones con Jabalíes (enemigos1)
       this.enemigos1 = this.enemigos1.filter((enemigo) => {
         if (this.personaje.colisionaCon(enemigo)) {
-          // --- CORRECCIÓN AQUÍ: Verificar si el elemento es hijo antes de remover ---
           if (this.container.contains(enemigo.element)) {
             this.container.removeChild(enemigo.element);
           }
-          // --- FIN CORRECCIÓN ---
-          this.actualizarPuntuacion(-6);
-          return false; // Elimina el enemigo del array
+          this.actualizarPuntuacion(-6); // Resta puntos por colisión con jabalí
+          return false; // Elimina el jabalí colisionado
         }
         return true;
       });
 
+      // Colisiones con Orbes (enemigos2)
       this.enemigos2 = this.enemigos2.filter((enemigo2) => {
         if (this.personaje.colisionaCon(enemigo2)) {
-          // --- CORRECCIÓN AQUÍ: Verificar si el elemento es hijo antes de remover ---
-          if (this.container.contains(enemigo2.element)) { // Aunque no de error aquí, es buena práctica
+          if (this.container.contains(enemigo2.element)) {
             this.container.removeChild(enemigo2.element);
           }
-          // --- FIN CORRECCIÓN ---
-          this.actualizarPuntuacion(3);
-          return false; // Elimina el enemigo del array
+          this.actualizarPuntuacion(3); // Suma puntos por colisión con orbe
+          return false; // Elimina el orbe colisionado
         }
         return true;
       });
     }, 100);
     this.gameIntervals.push(checkColisionesId);
   }
+
+  // Genera nuevos jabalíes a intervalos regulares
   generarEnemigos1Continuamente() {
     const genEnemigo1Id = setInterval(() => {
-      if (!this.gameOver && this.gameStarted) { // Condición para detener la generación
+      if (!this.gameOver && this.gameStarted) {
         const enemigo = new Enemigo();
         this.enemigos1.push(enemigo);
         this.container.appendChild(enemigo.element);
       }
-    }, 4000); // cada 2 segundos
-    this.gameIntervals.push(genEnemigo1Id); // Guardamos el ID
+    }, 4000); // Genera un jabalí cada 4 segundos
+    this.gameIntervals.push(genEnemigo1Id);
   }
 
+  // Genera nuevos orbes a intervalos regulares
   generarEnemigos2Continuamente() {
     const genEnemigo2Id = setInterval(() => {
-      if (!this.gameOver && this.gameStarted) { // Condición para detener la generación
+      if (!this.gameOver && this.gameStarted) {
         const enemigo2 = new Enemigo2();
         this.enemigos2.push(enemigo2);
         this.container.appendChild(enemigo2.element);
-        enemigo2.loop();
+        enemigo2.loop(); // Inicia el movimiento del nuevo orbe
       }
-    }, 1500); // Genera un Enemigo2 cada 1.5 segundos
-    this.gameIntervals.push(genEnemigo2Id); // Guardamos el ID
+    }, 1500); // Genera un orbe cada 1.5 segundos
+    this.gameIntervals.push(genEnemigo2Id);
   }
 
+  // Actualiza la puntuación del jugador y verifica condiciones de victoria/derrota
   actualizarPuntuacion(puntos) {
-    if (this.gameOver || !this.gameStarted) return; // Si ya es Game Over o no ha iniciado, no hagas nada
+    if (this.gameOver || !this.gameStarted) return;
 
     this.puntuacion += puntos;
-    this.puntuacion = Math.max(0, this.puntuacion); // Asegura que no baje de 0
+    this.puntuacion = Math.max(0, this.puntuacion); // Asegura que la puntuación no baje de 0
     this.puntosElement.textContent = `Puntos: ${this.puntuacion}`;
 
     console.log("Puntos actuales:", this.puntuacion);
 
-    if (this.puntuacion >= 100) { // CONDICIÓN DE VICTORIA
-        this.ganarJuego(); // Llama a un nuevo método para la victoria
-    } else if (this.puntuacion <= 0) {
+    if (this.puntuacion >= 100) { // Si la puntuación alcanza 100 o más, el jugador gana
+        this.ganarJuego();
+    } else if (this.puntuacion <= 0) { // Si la puntuación llega a 0 o menos, es Game Over
         this.finDelJuego();
     }
   }
 
-  // --- NUEVO MÉTODO: ganarJuego() para cuando se llega a 100 puntos ---
+  // Lógica ejecutada cuando el jugador alcanza los 100 puntos y gana
   ganarJuego() {
-      if (this.gameOver) return; // Evitar que se llame dos veces
+      if (this.gameOver) return; // Evita ejecuciones múltiples
       this.gameOver = true;
-      this.gameStarted = false; // El juego ya no está "activo"
+      this.gameStarted = false;
 
       console.log("¡HAS GANADO! EL MAGO HA RECUPERADO SU TAMAÑO.");
 
-      // Detener todos los bucles de juego
+      this.bgMusic.pause();
+      this.bgMusic.currentTime = 0;
+
+      // Detiene todos los intervalos de juego
       this.gameIntervals.forEach(intervalId => clearInterval(intervalId));
       this.gameIntervals = [];
 
-      // Ocultar al personaje y detener su movimiento
       if (this.personaje && this.personaje.element) {
-          // Si quieres que el personaje "crezca", podrías cambiar su CSS o sprite aquí
-          // Por ahora, solo lo detendremos.
           this.personaje.stopMoving();
-          // this.personaje.element.style.display = "block"; // Si lo ocultaste al perder puntos
+          this.personaje.aumentarTamano(50); 
       }
 
-      // Eliminar todos los enemigos
+      // Elimina todos los enemigos visibles
       [...this.enemigos1].forEach(enemigo => {
           if (enemigo.element && this.container.contains(enemigo.element)) {
-               this.container.removeChild(enemigo.element);
+             this.container.removeChild(enemigo.element);
           }
       });
       this.enemigos1 = [];
@@ -252,14 +274,14 @@ class Game {
       });
       this.enemigos2 = [];
 
-      // Mostrar mensaje de victoria
+      // Muestra el mensaje de victoria
       const winMessage = document.createElement("div");
       winMessage.textContent = "¡HAS GANADO! EL MAGO HA RECUPERADO SU TAMAÑO.";
       winMessage.id = "winMessage";
       winMessage.style.position = "absolute";
-      winMessage.style.fontSize = "4em";
+      winMessage.style.fontSize = "2.5em";
       winMessage.style.fontWeight = "bold";
-      winMessage.style.color = "#00FF00"; // Verde brillante para la victoria
+      winMessage.style.color = "#00FFff";
       winMessage.style.backgroundColor = "rgba(0, 0, 0, 0.85)";
       winMessage.style.fontFamily = "'Cinzel', serif";
       winMessage.style.padding = "40px";
@@ -274,13 +296,12 @@ class Game {
       winMessage.style.boxShadow = "0 8px 16px rgba(0, 0, 0, 0.5)";
       winMessage.style.boxSizing = "border-box";
 
-
       this.container.appendChild(winMessage);
 
-      // Botón de Reinicio también para la victoria
+      // Crea y añade el botón "Jugar de Nuevo"
       const restartButton = document.createElement("button");
       restartButton.textContent = "Jugar de Nuevo";
-      restartButton.id = "restartButtonWin"; // ID diferente para distinguirlo
+      restartButton.id = "restartButtonWin";
       restartButton.style.position = "absolute";
       restartButton.style.top = "60%";
       restartButton.style.left = "50%";
@@ -289,7 +310,7 @@ class Game {
       restartButton.style.padding = "15px 30px";
       restartButton.style.fontSize = "24px";
       restartButton.style.fontWeight = "bold";
-      restartButton.style.backgroundColor = "#4CAF50"; // Verde
+      restartButton.style.backgroundColor = "#4CAF50";
       restartButton.style.color = "white";
       restartButton.style.border = "2px solid #388E3C";
       restartButton.style.borderRadius = "8px";
@@ -298,35 +319,38 @@ class Game {
       restartButton.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.3)";
       restartButton.style.transition = "background-color 0.3s ease";
 
-      // Efecto hover
       restartButton.onmouseover = () => { restartButton.style.backgroundColor = "#5cb85c"; };
       restartButton.onmouseout = () => { restartButton.style.backgroundColor = "#4CAF50"; };
 
       restartButton.addEventListener("click", () => {
-          location.reload();
+          location.reload(); // Recarga la página para reiniciar el juego
       });
 
       this.container.appendChild(restartButton);
       console.log("Mensaje de victoria y botón de Reinicio añadidos.");
   }
 
-
+  // Lógica ejecutada cuando la puntuación llega a 0 y el juego termina
   finDelJuego() {
     console.log("¡Se ha llamado a finDelJuego! GAME OVER.");
-    this.gameOver = true; // Establece el flag de juego terminado
-    this.gameStarted = false; // El juego ya no está "activo"
+    this.gameOver = true;
+    this.gameStarted = false;
 
-    // Detener todos los bucles de juego (persecución, generación, colisiones)
+    // Pausa y reinicia la música de fondo al perder
+    this.bgMusic.pause();
+    this.bgMusic.currentTime = 0;
+
+    // Detiene todos los intervalos de juego
     this.gameIntervals.forEach(intervalId => clearInterval(intervalId));
     this.gameIntervals = [];
 
-    // Ocultar al personaje y detener su movimiento
+    // Oculta el personaje y detiene su movimiento
     if (this.personaje && this.personaje.element) {
-        this.personaje.element.style.display = "none"; // Ocultar al personaje al perder
+        this.personaje.element.style.display = "none";
         this.personaje.stopMoving();
     }
 
-    // Eliminar todos los enemigos visibles
+    // Elimina todos los enemigos visibles
     [...this.enemigos1].forEach(enemigo => {
         if (enemigo.element && this.container.contains(enemigo.element)) {
              this.container.removeChild(enemigo.element);
@@ -341,14 +365,14 @@ class Game {
     });
     this.enemigos2 = [];
 
-    // Mostrar mensaje de Game Over
+    // Muestra el mensaje de Game Over
     const gameOverMessage = document.createElement("div");
     gameOverMessage.textContent = "GAME OVER";
     gameOverMessage.id = "gameOverMessage";
     gameOverMessage.style.position = "absolute";
     gameOverMessage.style.fontSize = "60px";
     gameOverMessage.style.fontWeight = "bold";
-    gameOverMessage.style.color = "#FFD700"; // Oro
+    gameOverMessage.style.color = "#FFD700";
     gameOverMessage.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
     gameOverMessage.style.fontFamily = "'Cinzel', serif";
     gameOverMessage.style.padding = "20px 40px";
@@ -356,47 +380,43 @@ class Game {
     gameOverMessage.style.textAlign = "center";
     gameOverMessage.style.width = "auto";
     gameOverMessage.style.whiteSpace = "nowrap";
-    gameOverMessage.style.top = "40%"; // Ajustado un poco más arriba para dejar espacio para el botón
+    gameOverMessage.style.top = "40%";
     gameOverMessage.style.left = "50%";
     gameOverMessage.style.transform = "translate(-50%, -50%)";
     gameOverMessage.style.zIndex = "100";
     gameOverMessage.style.boxShadow = "0 8px 16px rgba(0, 0, 0, 0.5)";
     gameOverMessage.style.boxSizing = "border-box";
 
-
     this.container.appendChild(gameOverMessage);
     console.log("Mensaje de Game Over añadido al DOM.");
 
-    // --- AÑADIR EL BOTÓN DE REINICIO ---
+    // Crea y añade el botón de reinicio
     const restartButton = document.createElement("button");
     restartButton.textContent = "Reiniciar Juego";
     restartButton.id = "restartButton";
     restartButton.style.position = "absolute";
-    restartButton.style.top = "60%"; // Posicionado debajo del mensaje de Game Over
+    restartButton.style.top = "60%";
     restartButton.style.left = "50%";
     restartButton.style.transform = "translate(-50%, -50%)";
-    restartButton.style.zIndex = "101"; // Z-index superior al mensaje
+    restartButton.style.zIndex = "101";
     restartButton.style.padding = "15px 30px";
     restartButton.style.fontSize = "24px";
     restartButton.style.fontWeight = "bold";
-    restartButton.style.backgroundColor = "#4CAF50"; // Un verde atractivo
+    restartButton.style.backgroundColor = "#4CAF50";
     restartButton.style.color = "white";
     restartButton.style.border = "2px solid #388E3C";
     restartButton.style.borderRadius = "8px";
     restartButton.style.cursor = "pointer";
-    restartButton.style.fontFamily = "'Cinzel', serif"; // También con la fuente del juego
-    restartButton.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.3)"; // Sombra para que resalte
+    restartButton.style.fontFamily = "'Cinzel', serif";
+    restartButton.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.3)";
     restartButton.style.transition = "background-color 0.3s ease";
 
-    // Efecto hover
     restartButton.onmouseover = () => { restartButton.style.backgroundColor = "#5cb85c"; };
     restartButton.onmouseout = () => { restartButton.style.backgroundColor = "#4CAF50"; };
 
-
-    // Evento de clic para reiniciar el juego
     restartButton.addEventListener("click", () => {
         console.log("Botón Reiniciar clicado. Recargando la página.");
-        location.reload(); // Recarga la página para reiniciar
+        location.reload();
     });
 
     this.container.appendChild(restartButton);
@@ -404,48 +424,52 @@ class Game {
   }
 }
 
-// --- CLASE PERSONAJE ---
+// CLASE PERSONAJE
 class Personaje {
   constructor() {
+    // Propiedades de posición y tamaño
     this.x = 50;
     this.y = 0;
     this.width = 64;
     this.height = 100;
-    this.velocidad = 10;
+    this.velocidad = 10; // Velocidad de movimiento horizontal
+
+    // Banderas de control de teclado
     this.rightPressed = false;
     this.leftPressed = false;
-    this.jumpCount = 0;
-    this.saltoTimer = null;
-    this.gravedadTimer = null;
     this.spacePressed = false;
-    this.saltoSimple = 100;
-    this.saltoDoble = 170;
-    this.movementInterval = null; // Para guardar el ID del intervalo de movimiento
 
+    // Propiedades de salto
+    this.jumpCount = 0; // Para controlar el doble salto
+    this.saltoSimple = 100; // Altura del primer salto
+    this.saltoDoble = 170; // Altura del segundo salto (adicional al primero)
+    this.saltoTimer = null; // ID del intervalo de salto
+    this.gravedadTimer = null; // ID del intervalo de caída por gravedad
+
+    // Elemento DOM del personaje
     this.element = document.createElement("div");
     this.element.classList.add("personaje");
     this.element.style.width = `${this.width}px`;
     this.element.style.height = `${this.height}px`;
 
-    this.groundY = 600 - this.height + 30; // 600px es la altura del game-container
-    this.y = this.groundY; // Posiciona el personaje en el suelo inicialmente
+    // Posición inicial en el suelo
+    this.groundY = 600 - this.height + 30; // Calcula la posición Y del suelo (altura del contenedor - altura personaje + ajuste)
+    this.y = this.groundY;
     this.actualizarPosicion();
 
-    // El loop del personaje ahora se iniciará solo cuando el juego comience
-    // Eliminado: this.loop();
+    this.movementInterval = null; // Para controlar el bucle de movimiento
   }
 
+  // Bucle principal para el movimiento horizontal del personaje
   loop() {
-    // Solo iniciar el intervalo de movimiento si no está ya activo
     if (!this.movementInterval) {
       this.movementInterval = setInterval(() => {
-        // Solo mover si el juego ha iniciado y no ha terminado
         if (juego.gameStarted && !juego.gameOver) {
           if (this.rightPressed) {
-            this.x = Math.min(this.x + this.velocidad, 1200 - this.width);
+            this.x = Math.min(this.x + this.velocidad, 1200 - this.width); // Mueve a la derecha, limitado por el borde
           }
           if (this.leftPressed) {
-            this.x = Math.max(this.x - this.velocidad, 0);
+            this.x = Math.max(this.x - this.velocidad, 0); // Mueve a la izquierda, limitado por el borde
           }
           this.actualizarPosicion();
         }
@@ -453,6 +477,7 @@ class Personaje {
     }
   }
 
+  // Detiene todos los movimientos y animaciones del personaje
   stopMoving() {
     if (this.movementInterval) {
       clearInterval(this.movementInterval);
@@ -465,49 +490,53 @@ class Personaje {
     this.spacePressed = false;
   }
 
+  // Maneja el inicio de movimiento por pulsación de tecla
   mover(e) {
     if (e.key === "ArrowRight") this.rightPressed = true;
     if (e.key === "ArrowLeft") this.leftPressed = true;
-    // Asegurarse de que el salto solo ocurra si el juego está iniciado y no ha terminado
+    // Permite saltar (hasta doble salto) solo si el juego está activo y la tecla espacio no está ya presionada
     if (juego.gameStarted && !juego.gameOver && e.code === "Space" && this.jumpCount < 2 && !this.spacePressed) {
       this.spacePressed = true;
       this.saltar();
     }
   }
 
+  // Maneja el fin de movimiento por liberación de tecla
   finMover(e) {
     if (e.key === "ArrowRight") this.rightPressed = false;
     if (e.key === "ArrowLeft") this.leftPressed = false;
     if (e.code === "Space") this.spacePressed = false;
   }
 
+  // Lógica del salto (simple o doble)
   saltar() {
     if (this.saltoTimer) clearInterval(this.saltoTimer);
     if (this.gravedadTimer) clearInterval(this.gravedadTimer);
 
-    this.jumpCount++;
-    const saltoAltura = this.jumpCount === 1 ? this.saltoSimple : this.saltoDoble;
-    const targetY = this.y - saltoAltura;
+    this.jumpCount++; // Incrementa el contador de saltos
+    const saltoAltura = this.jumpCount === 1 ? this.saltoSimple : this.saltoDoble; // Define la altura según el número de saltos
+    const targetY = this.y - saltoAltura; // Calcula la posición Y máxima del salto
 
     this.saltoTimer = setInterval(() => {
       if (this.y > targetY) {
-        this.y -= 10;
+        this.y -= 10; // Sube al personaje
         this.actualizarPosicion();
       } else {
         clearInterval(this.saltoTimer);
-        this.caer();
+        this.caer(); // Cuando llega a la altura máxima, inicia la caída
       }
     }, 20);
   }
 
+  // Lógica de caída por gravedad
   caer() {
     if (this.gravedadTimer) clearInterval(this.gravedadTimer);
 
     this.gravedadTimer = setInterval(() => {
-      this.y += 10;
-      if (this.y >= this.groundY) {
-        this.y = this.groundY;
-        this.jumpCount = 0;
+      this.y += 10; // Baja al personaje
+      if (this.y >= this.groundY) { // Si llega o pasa del suelo
+        this.y = this.groundY; // Ajusta a la posición exacta del suelo
+        this.jumpCount = 0; // Reinicia el contador de saltos
         clearInterval(this.gravedadTimer);
         this.gravedadTimer = null;
       }
@@ -515,11 +544,13 @@ class Personaje {
     }, 20);
   }
 
+  // Actualiza la posición visual del elemento DOM del personaje
   actualizarPosicion() {
     this.element.style.left = `${this.x}px`;
     this.element.style.top = `${this.y}px`;
   }
 
+  // Detecta si el personaje colisiona con otro objeto
   colisionaCon(objeto) {
     return (
       this.x < objeto.x + objeto.width &&
@@ -529,29 +560,27 @@ class Personaje {
     );
   }
 
+  // Aumenta el tamaño visual del personaje (para la victoria)
   aumentarTamano(aumentoPx) {
-        // Aumenta el ancho y el alto actuales del personaje
-        this.width += aumentoPx;
-        this.height += aumentoPx;
+      this.width += aumentoPx; // Aumenta el ancho
+      this.height += aumentoPx; // Aumenta el alto
 
-        // Ajusta la posición Y para que el personaje "crezca hacia arriba"
-        // (es decir, su base permanezca en el suelo)
-        this.y = this.groundY - (this.height - 100); // 100 es la altura inicial
-
-        // Vuelve a aplicar el tamaño y la posición al elemento HTML
-        this.actualizarPosicion();
-        console.log(`¡Personaje ha crecido! Nuevo tamaño: ${this.width}x${this.height}px`);
-    }
+      this.y = this.groundY - (this.height - 100); // Ajusta la posición Y para que crezca "hacia arriba"
+      this.actualizarPosicion();
+      console.log(`¡Personaje ha crecido! Nuevo tamaño: ${this.width}x${this.height}px`);
+  }
 }
 
-
-// --- CLASE ENEMIGO (Jabalí) ---
+// CLASE ENEMIGO (Jabalí)
 class Enemigo {
   constructor() {
+    // Propiedades de tamaño y posición inicial aleatoria
     this.width = 30;
     this.height = 30;
-    this.x = Math.random() * (1200 - this.width - 100) + 100;
-    this.y = 600 - this.height;
+    this.x = Math.random() * (1200 - this.width - 100) + 100; // Posición X aleatoria
+    this.y = 600 - this.height; // Posición Y en el suelo
+
+    // Elemento DOM del enemigo
     this.element = document.createElement("div");
     this.element.classList.add("enemigo");
     this.element.style.width = `${this.width}px`;
@@ -559,87 +588,84 @@ class Enemigo {
     this.actualizarPosicion();
   }
 
+  // Hace que el enemigo persiga al personaje
   perseguir(targetX, velocidad = 2) {
-    if (this.x < targetX) this.x += velocidad;
-    else if (this.x > targetX) this.x -= velocidad;
+    if (this.x < targetX) this.x += velocidad; // Se mueve hacia la derecha si el personaje está a la derecha
+    else if (this.x > targetX) this.x -= velocidad; // Se mueve hacia la izquierda si el personaje está a la izquierda
     this.actualizarPosicion();
   }
 
+  // Actualiza la posición visual del elemento DOM del enemigo
   actualizarPosicion() {
     this.element.style.left = `${this.x}px`;
     this.element.style.top = `${this.y}px`;
   }
 }
 
-// --- CLASE ENEMIGO2 (Orbe Volador) ---
+// CLASE ENEMIGO2 (Orbe Volador)
 class Enemigo2 {
   constructor() {
+    // Propiedades de tamaño y posición inicial fuera de la pantalla (arriba)
     this.width = 48;
     this.height = 48;
-    this.x = Math.random() * (1200 - this.width);
-    this.y = -this.height;
-    this.velocidadCaida = Math.random() * 2 + 1;
+    this.x = Math.random() * (1200 - this.width); // Posición X aleatoria
+    this.y = -this.height; // Comienza por encima del límite superior
+    this.velocidadCaida = Math.random() * 2 + 1; // Velocidad de caída aleatoria
 
+    // Elemento DOM del orbe
     this.element = document.createElement("div");
     this.element.classList.add("enemigo2");
     this.element.style.width = `${this.width}px`;
     this.element.style.height = `${this.height}px`;
 
-    // --- CÓDIGO NUEVO PARA IMÁGENES ALEATORIAS DE ORBES ---
-    // Define las rutas a tus imágenes de orbes.
-    // ASEGÚRATE de que estos nombres de archivo coincidan exactamente
-    // con los nombres de tus PNGs en la misma carpeta.
+    // Selección aleatoria de imagen para el orbe
     const orbImages = [
-      "assets/orb1.png",   // <--- Rutas con "assets/" y comillas dobles
+      "assets/orb1.png",
       "assets/orb2.png",
       "assets/orb3.png",
       "assets/orb4.png"
     ];
-
-    // Selecciona una imagen al azar del array
     const randomImage = orbImages[Math.floor(Math.random() * orbImages.length)];
-
-    // Asigna la imagen de fondo al elemento del orbe
     this.element.style.backgroundImage = `url("${randomImage}")`;
-    this.element.style.backgroundSize = "cover"; // Ajusta la imagen para que cubra el elemento
-    this.element.style.backgroundPosition = "center"; // Centra la imagen dentro del elemento
-    this.element.style.backgroundRepeat = "no-repeat"; // Evita que la imagen se repita
+    this.element.style.backgroundSize = "cover";
+    this.element.style.backgroundPosition = "center";
+    this.element.style.backgroundRepeat = "no-repeat";
 
     this.actualizarPosicion();
   }
 
+  // Bucle principal para el movimiento de caída del orbe
   loop() {
     setInterval(() => {
       if (juego.gameStarted && !juego.gameOver) {
-        this.caer();
+        this.caer(); // Llama al método de caída
       }
     }, 50);
   }
 
+  // Lógica de caída del orbe
   caer() {
-    const gameContainerHeight = 600;
+    const gameContainerHeight = 600; // Altura del contenedor del juego
 
-    this.y += this.velocidadCaida;
+    this.y += this.velocidadCaida; // El orbe desciende
 
-    if (this.y > gameContainerHeight) {
-      this.resetearPosicion();
+    if (this.y > gameContainerHeight) { // Si el orbe sale por la parte inferior
+      this.resetearPosicion(); // Lo resetea a una nueva posición superior
     }
     this.actualizarPosicion();
   }
 
+  // Reinicia la posición del orbe en la parte superior de la pantalla
   resetearPosicion() {
     this.x = Math.random() * (1200 - this.width);
     this.y = -this.height;
     this.velocidadCaida = Math.random() * 2 + 1;
   }
 
+  // Actualiza la posición visual del elemento DOM del orbe
   actualizarPosicion() {
     this.element.style.left = `${this.x}px`;
     this.element.style.top = `${this.y}px`;
   }
 }
-
-// --- INICIAR EL JUEGO ---
-// Instanciamos el juego. Ahora, el constructor llamará a mostrarInstrucciones()
-// y el juego en sí no empezará hasta que se pulse el botón "Empezar Aventura".
 const juego = new Game();
